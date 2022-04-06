@@ -1,3 +1,9 @@
+# SB
+workload_options.json
+__pycache__
+nodeJS/logs
+
+# Originial
 */bin/
 */.env
 */.sb/
