@@ -1,50 +1,11 @@
 /* eslint-disable no-restricted-syntax */
-import * as appInsights from 'applicationinsights'
-import * as azure from '@pulumi/azure'
 import * as pulumi from '@pulumi/pulumi'
+import * as azure from '@pulumi/azure'
 import * as automation from '@pulumi/pulumi/automation'
-import workload from '../workloads/workload'
 import * as dotenv from 'dotenv'
+import handler from './handler'
 
 dotenv.config({ path: './../.env' })
-
-const handler = async (context: any) => {
-  // Setup application insights
-  appInsights
-    .setup()
-    .setAutoDependencyCorrelation(true)
-    .setAutoCollectRequests(true)
-    .setAutoCollectPerformance(true, true)
-    .setAutoCollectExceptions(true)
-    .setAutoCollectDependencies(true)
-    .setAutoCollectConsole(true)
-    .setUseDiskRetryCaching(false)
-    .setSendLiveMetrics(false)
-    .setDistributedTracingMode(appInsights.DistributedTracingModes.AI_AND_W3C)
-  appInsights.defaultClient.setAutoPopulateAzureProperties(true)
-  appInsights.start()
-
-  const correlationContext = appInsights.startOperation(
-    context,
-    'correlationContextStorage'
-  )
-
-  const invocationId = context["bindingData"]["metadata"]["operationId"].replace('|', '').split('.')[0];
-
-  appInsights.defaultClient.trackDependency({
-    name: 'Custom operationId storage',
-    dependencyTypeName: 'HTTP',
-    resultCode: 200,
-    success: true,
-    data: correlationContext!.operation.id,
-    duration: 10,
-    id: invocationId
-  });
-
-  appInsights.defaultClient.flush();
-
-  return workload()
-}
 
 const getStorageResources = async () => {
   // Import shared resources
@@ -76,7 +37,7 @@ const getStorageResources = async () => {
     containerAccessType: 'private'
   })
 
-  const blobEvent = container.onBlobEvent('StorageTrigger', {
+  const blobEvent = container.onBlobEvent('storageTrigger', {
     resourceGroup: resourceGroup,
     location: process.env.PULUMI_AZURE_LOCATION,
 
