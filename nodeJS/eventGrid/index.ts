@@ -1,50 +1,10 @@
-import * as appInsights from 'applicationinsights'
-import * as azure from '@pulumi/azure'
 import * as pulumi from '@pulumi/pulumi'
-import workload from '../workloads/workload'
+import * as azure from '@pulumi/azure'
 import * as automation from '@pulumi/pulumi/automation'
 import * as dotenv from 'dotenv'
+import handler from './handler'
 
 dotenv.config({ path: './../.env' })
-
-const handler = async (context: any) => {
-  // Setup application insights
-
-  appInsights
-    .setup()
-    .setAutoDependencyCorrelation(true)
-    .setAutoCollectRequests(true)
-    .setAutoCollectPerformance(true, true)
-    .setAutoCollectExceptions(true)
-    .setAutoCollectDependencies(true)
-    .setAutoCollectConsole(true)
-    .setUseDiskRetryCaching(false)
-    .setSendLiveMetrics(false)
-    .setDistributedTracingMode(appInsights.DistributedTracingModes.AI_AND_W3C)
-  appInsights.defaultClient.setAutoPopulateAzureProperties(true)
-  appInsights.start()
-
-  const correlationContext = appInsights.startOperation(
-    context,
-    'correlationContexteventGrid'
-  )
-
-  const invocationId = context["bindings"]["message"]["subject"].split('/').pop();
-
-  appInsights.defaultClient.trackDependency({
-    name: 'Custom operationId eventGrid',
-    dependencyTypeName: 'HTTP',
-    resultCode: 200,
-    success: true,
-    data: correlationContext!.operation.id,
-    duration: 10,
-    id: invocationId
-  });
-
-  appInsights.defaultClient.flush();
-
-  return workload()
-}
 
 const geteventGridResources = async () => {
   const user = await automation.LocalWorkspace.create({}).then(ws =>

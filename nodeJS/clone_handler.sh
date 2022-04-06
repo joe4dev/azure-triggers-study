@@ -8,5 +8,10 @@
 # but not at this higher shared level causes
 # the deployment to fail.
 
-cp queue/handler.ts database/handler.ts
-cp queue/handler.ts storage/handler.ts
+cp http/handler.ts queue/handler.ts
+cp http/handler.ts database/handler.ts
+cp http/handler.ts storage/handler.ts
+cp http/handler.ts serviceBus/handler.ts
+cp http/handler.ts eventGrid/handler.ts
+cp http/handler.ts eventHub/handler.ts
+cp http/handler.ts timer/handler.ts

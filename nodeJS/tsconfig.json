@@ -13,7 +13,7 @@
     "forceConsistentCasingInFileNames": true
   },
   "files": [
-    "workloads/workload.ts",
+    "handlers/handler.ts",
     "http/index.ts",
     "shared/index.ts",
     "infra/index.ts",
@@ -24,6 +24,6 @@
     "timer/index.ts",
     "eventHub/index.ts",
     "eventGrid/index.ts",
-    "http/triggers/node/HttpTrigger/index.ts"
+    "http/index.ts"
   ]
 }

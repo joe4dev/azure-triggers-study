@@ -7,7 +7,7 @@ BENCHMARK_CONFIG = """
 trigger_bench:
   description: Tests different trigger types.
   provider: azure
-  trigger: storage
+  trigger: serviceBus
   region: eastus
   runtime: node
 """
