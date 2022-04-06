@@ -1,5 +1,10 @@
 import * as appInsights from 'applicationinsights'
 
+// NOTE: Run clone_handler.sh after modifying this file.
+// It is currently copied into each trigger directory because
+// sharing the same file in a directory above breaks deployment.
+// SHOULD: Fix typescript config to share code instead of copy!
+
 // Application Insights in Azure Function:
 // https://github.com/microsoft/ApplicationInsights-node.js#azure-functions
 
@@ -99,6 +104,9 @@ const handler = async (context: any, event: any) => {
         // Add additional receiver subsegments to measure Insights timestamp overhead
         for (let i = 1; i <= numReceiverSpans; i++) {
             const extraStartTime = Date.now()
+
+            // Intentionally idle.
+
             appInsights.defaultClient.trackDependency({
                 name: `receiver${i}`,
                 dependencyTypeName: 'CUSTOM',
@@ -108,6 +116,15 @@ const handler = async (context: any, event: any) => {
                 data: ''
             })
         }
+
+        // Inspect node runtime version
+        appInsights.defaultClient.trackTrace({
+            message: 'Node version',
+            properties: {
+                node_version: process.version,
+            }
+        })
+
         // Immediately send all queued telemetry data
         appInsights.defaultClient.flush()
         return response
