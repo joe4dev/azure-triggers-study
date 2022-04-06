@@ -62,7 +62,7 @@ const handler = async (context: any, event: any) => {
     } else if (functionName === 'storageTrigger') {
         rootTraceId = context["bindingData"]["metadata"]["operationId"].replace('|', '').split('.')[0]
     } else if (functionName === 'timerTrigger') {
-        context.bindingData["timer"].replace("|","").split(".")[0]
+        rootTraceId = context["bindingData"]["timer"].replace("|","").split(".")[0]
     } else {
         console.error('Could not detect rootTraceId for this trigger.')
     }

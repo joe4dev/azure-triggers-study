@@ -13,7 +13,6 @@
     "forceConsistentCasingInFileNames": true
   },
   "files": [
-    "handlers/handler.ts",
     "http/index.ts",
     "shared/index.ts",
     "infra/index.ts",

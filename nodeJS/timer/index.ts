@@ -18,7 +18,7 @@ const getEndpoint = async () => {
   const insightsId = shared.requireOutput('insightsId');
   const insights = azure.appinsights.Insights.get('Insights', insightsId);
 
-  // HTTP trigger
+  // Timer trigger through HTTP timer firing API
   const timer = new azure.appservice.TimerFunction("timerTrigger", {
     schedule: {month: 11},
     runOnStartup: false,
@@ -28,6 +28,7 @@ const getEndpoint = async () => {
   const app = new azure.appservice.MultiCallbackFunctionApp("timerApp", {
     resourceGroupName: resourceGroup.name,
     functions: [timer],
+    location: process.env.PULUMI_AZURE_LOCATION,
     appSettings: {
       APPINSIGHTS_INSTRUMENTATIONKEY: insights.instrumentationKey,
     },
