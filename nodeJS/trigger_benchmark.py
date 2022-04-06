@@ -7,7 +7,7 @@ BENCHMARK_CONFIG = """
 trigger_bench:
   description: Tests different trigger types.
   provider: azure
-  trigger: eventHub
+  trigger: http
   region: eastus
   runtime: node
 """

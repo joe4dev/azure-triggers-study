@@ -51,25 +51,9 @@ deploy_http_trigger() {
   cd http/ && pulumi stack select trigger -c && pulumi up -f -y
 
   # Get url to HTTP trigger gateway
-  #TRIGGER_URL=$(pulumi stack output url)
-  FUNCTION_APP_ROOT=$(pulumi stack output url)
+  TRIGGER_URL=$(pulumi stack output url)
+  FUNCTION_APP=$(pulumi stack output functionApp)
 
-  # Correct runtime
-  if [ "$RUNTIME" = 'dotnet' ]; then
-    cd triggers/dotnet
-  elif [ "$RUNTIME" = 'node' ] || [ "$RUNTIME" = '' ]; then
-    cd triggers/node
-  fi
-
-
-  FUNCTIONAPP_NAME=$(pulumi stack output functionAppName)
-  func azure functionapp publish $FUNCTIONAPP_NAME --force
-  FUNCTION_URL=$(func azure functionapp list-functions $FUNCTIONAPP_NAME --show-keys)
-
-  FUNCTION_URL=$(echo "$FUNCTION_URL"|grep -Eo "https://[^ >]+"|head -1)
-
-  cd ..
-  cd ..
   cd ..
 
   # Deploy infrastructure
@@ -79,10 +63,10 @@ deploy_http_trigger() {
   BENCHMARK_URL=$(pulumi stack output url)
 
   echo "Write URL to .env"
-  echo "BENCHMARK_URL=\"$BENCHMARK_URL?trigger=http&input=$FUNCTION_URL\"" >>$FILE_NAME
-  curl -s $FUNCTION_APP_ROOT > /tmp/output.html
+  echo "BENCHMARK_URL=\"$BENCHMARK_URL?trigger=http&input=$TRIGGER_URL\"" >>$FILE_NAME
+  curl -s $FUNCTION_APP > /tmp/output.html
   echo "Start HTTP trigger benchmark:"
-  echo "$BENCHMARK_URL?trigger=http&input=$FUNCTION_URL"
+  echo "$BENCHMARK_URL?trigger=http&input=$TRIGGER_URL"
 }
 
 deploy_storage_trigger() {

@@ -19,7 +19,7 @@ const getEndpoint = async () => {
   const insights = azure.appinsights.Insights.get('Insights', insightsId);
 
   // HTTP trigger
-  return new azure.appservice.HttpEventSubscription('httpTrigger', {
+  const httpEvent = new azure.appservice.HttpEventSubscription('httpTrigger', {
     resourceGroup,
     location: process.env.PULUMI_AZURE_LOCATION,
     callback: handler,
@@ -27,6 +27,11 @@ const getEndpoint = async () => {
       APPINSIGHTS_INSTRUMENTATIONKEY: insights.instrumentationKey,
     },
   });
+
+  return {
+    url: httpEvent.url,
+    functionApp: httpEvent.functionApp.endpoint.apply(e => e.replace("/api/",""))
+  }
 };
 
-exports.url = getEndpoint().then((endpoint) => endpoint.url);
+module.exports = getEndpoint().then(e => e)
