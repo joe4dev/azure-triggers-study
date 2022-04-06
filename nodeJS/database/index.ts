@@ -1,52 +1,11 @@
-import * as appInsights from 'applicationinsights'
 import * as azure from '@pulumi/azure'
 import * as cosmosdb from '@pulumi/azure/cosmosdb'
-import * as dotenv from 'dotenv'
 import * as automation from '@pulumi/pulumi/automation'
 import * as pulumi from '@pulumi/pulumi'
-import workload from '../workloads/workload'
+import * as dotenv from 'dotenv'
+import handler from './handler'
 
 dotenv.config({ path: './../.env' })
-
-const handler = async (context: any) => {
-  // Setup application insights
-  appInsights
-    .setup()
-    .setAutoDependencyCorrelation(true)
-    .setAutoCollectRequests(true)
-    .setAutoCollectPerformance(true, true)
-    .setAutoCollectExceptions(true)
-    .setAutoCollectDependencies(true)
-    .setAutoCollectConsole(true)
-    .setUseDiskRetryCaching(false)
-    .setSendLiveMetrics(false)
-    .setUseDiskRetryCaching(false)
-    .setDistributedTracingMode(appInsights.DistributedTracingModes.AI_AND_W3C)
-  appInsights.defaultClient.setAutoPopulateAzureProperties(true)
-  appInsights.start()
-
-  const correlationContext = appInsights.startOperation(
-    context,
-    'correlationContextDatabase'
-  )
-
-  const invocationId = context['bindings']['items'][0]['newOperationId']
-
-
-  appInsights.defaultClient.trackDependency({
-    name: 'Custom operationId database',
-    dependencyTypeName: 'HTTP',
-    resultCode: 200,
-    success: true,
-    data: correlationContext!.operation.id,
-    duration: 10,
-    id: invocationId
-  });
-
-  appInsights.defaultClient.flush();
-
-  return workload()
-}
 
 const getDatabaseResources = async () => {
   // Import shared resources

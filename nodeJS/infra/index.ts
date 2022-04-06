@@ -1,17 +1,31 @@
-import * as Storage from '@azure/storage-blob'
-import * as StorageQueue from '@azure/storage-queue'
-import * as Identity from '@azure/identity'
-import * as EventHub from '@azure/event-hubs'
-import * as azure from '@pulumi/azure'
+// Pulumi infrastructure imports
 import * as pulumi from '@pulumi/pulumi'
-import * as appInsights from 'applicationinsights'
+import * as azure from '@pulumi/azure'
 import * as automation from '@pulumi/pulumi/automation'
+
+// Runtime dependencies
+import * as Identity from '@azure/identity'
+import * as Storage from '@azure/storage-blob'
+import * as cosmos from '@azure/cosmos'
+import * as StorageQueue from '@azure/storage-queue'
+import * as EventHub from '@azure/event-hubs'
+import * as serviceBus from '@azure/service-bus'
+import * as appInsights from 'applicationinsights'
 import axios from 'axios'
 import * as dotenv from 'dotenv'
-import * as cosmos from '@azure/cosmos'
-import * as serviceBus from '@azure/service-bus'
 
 dotenv.config({ path: './../.env' })
+
+const supportedTriggers = [
+  'http',
+  'storage',
+  'queue',
+  'database',
+  'timer',
+  'eventHub',
+  'eventGrid',
+  'serviceBus',
+]
 
 type Response = {
   status: number
@@ -358,9 +372,7 @@ const getEventGridFunction = (
   })
 
 const handler = async (context: any, req: any) => {
-  // const trace = openTelemetryApi.default;
   // Setup application insights
-
   appInsights
     .setup()
     .setAutoDependencyCorrelation(true)
@@ -375,39 +387,34 @@ const handler = async (context: any, req: any) => {
   appInsights.defaultClient.setAutoPopulateAzureProperties(true)
   appInsights.start()
 
-  // Start an AI Correlation Context using the provided Function context
-
   // Get URL params
   const triggerType: string = req.query && req.query.trigger
   const validTrigger: string | boolean =
-    triggerType &&
-    (triggerType === 'http' ||
-      triggerType === 'storage' ||
-      triggerType === 'queue' ||
-      triggerType === 'database' ||
-      triggerType === 'timer' ||
-      triggerType === 'eventHub' ||
-      triggerType === 'eventGrid' ||
-      triggerType === 'serviceBus')
+    triggerType && (supportedTriggers.includes(triggerType))
   const triggerInput: string = req.query && req.query.input
 
   if (validTrigger && triggerInput) {
+    // Start an AI Correlation Context using the provided Function context
     const correlationContext: any = appInsights.startOperation(context, req)
-    
-    if(req.query.id != undefined){
-    appInsights.defaultClient.trackTrace({
-      message: 'iterationId' + triggerType,
-      properties: {
-        iterationId: req.query.id,
-      }
-    })
-  }
 
     if (triggerType === 'http') {
       // HTTP trigger
       return appInsights.wrapWithCorrelationContext(async () => {
+        const startTime = Date.now()
 
         const response = await getHttpFunction(triggerInput,correlationContext.operation.id)
+
+        // Track dependency on completion
+        appInsights.defaultClient.trackDependency({
+          name: 'http_trigger',
+          dependencyTypeName: triggerType,
+          resultCode: response.status,
+          success: true,
+          duration: Date.now() - startTime,
+          id: correlationContext.operation.parentId,
+          data: ''
+        })
+        appInsights.defaultClient.flush()
 
         return response
       }, correlationContext)()
@@ -417,7 +424,8 @@ const handler = async (context: any, req: any) => {
       const queueInputs = triggerInput.split(',')
       // Queue trigger
       return appInsights.wrapWithCorrelationContext(async () => {
-        const startTime = Date.now() // Start trackRequest timer
+        const startTime = Date.now()
+
         const response = await getQueueFunction(
           queueInputs[0],
           queueInputs[1],
@@ -426,8 +434,8 @@ const handler = async (context: any, req: any) => {
 
         // Track dependency on completion
         appInsights.defaultClient.trackDependency({
-          name: 'CompletionTrackQueue',
-          dependencyTypeName: 'HTTP',
+          name: 'queue_trigger',
+          dependencyTypeName: triggerType,
           resultCode: response.status,
           success: true,
           duration: Date.now() - startTime,
@@ -443,16 +451,18 @@ const handler = async (context: any, req: any) => {
       // Storage trigger
       if (storageInputs.length === 2) {
         return appInsights.wrapWithCorrelationContext(async () => {
-          const startTime = Date.now() // Start trackRequest timer
+          const startTime = Date.now()
+
           const response = await getStorageFunction(
             storageInputs[0],
             storageInputs[1],
             correlationContext.operation.parentId
           )
+
           // Track dependency on completion
           appInsights.defaultClient.trackDependency({
-            name: 'CompletionTrackStorage',
-            dependencyTypeName: 'HTTP',
+            name: 'storage_trigger',
+            dependencyTypeName: triggerType,
             resultCode: response.status,
             success: true,
             duration: Date.now() - startTime,
@@ -471,15 +481,17 @@ const handler = async (context: any, req: any) => {
       if (databaseInputs.length === 2) {
         return appInsights.wrapWithCorrelationContext(async () => {
           const startTime = Date.now()
+
           const response = await getDatabaseFunction(
             databaseInputs[0],
             databaseInputs[1],
             correlationContext.operation.id
           )
+
           // Track dependency on completion
           appInsights.defaultClient.trackDependency({
-            name: 'CompletionTrackDatabase',
-            dependencyTypeName: 'HTTP',
+            name: 'database_trigger',
+            dependencyTypeName: triggerType,
             resultCode: response.status,
             success: true,
             duration: Date.now() - startTime,
@@ -494,15 +506,17 @@ const handler = async (context: any, req: any) => {
 
     if (triggerType == 'timer') {
       return appInsights.wrapWithCorrelationContext(async () => {
-        const startTime = Date.now() // Start trackRequest timer
+        const startTime = Date.now()
+
         const response = await getTimerFunction(
           triggerInput,
           correlationContext.operation.parentId
         )
+
         // Track dependency on completion
         appInsights.defaultClient.trackDependency({
-          name: 'CompletionTrackTimer',
-          dependencyTypeName: 'HTTP',
+          name: 'timer_trigger',
+          dependencyTypeName: triggerType,
           resultCode: response.status,
           success: true,
           duration: Date.now() - startTime,
@@ -516,21 +530,23 @@ const handler = async (context: any, req: any) => {
     if (triggerType === 'serviceBus') {
       const serviceBusInputs = triggerInput.split(',')
       return appInsights.wrapWithCorrelationContext(async () => {
-        const startTime = Date.now() // Start trackRequest timer
+        const startTime = Date.now()
+
         const response = await getServiceBusResources(
           serviceBusInputs[0],
           serviceBusInputs[1],
           correlationContext.operation.parentId
         )
+
         // Track dependency on completion
         appInsights.defaultClient.trackDependency({
-          name: 'CompletionTrackserviceBus',
-          dependencyTypeName: 'HTTP',
+          name: 'serviceBus_trigger',
+          dependencyTypeName: triggerType,
           resultCode: response.status,
           success: true,
-          data: req.query.input,
           duration: Date.now() - startTime,
-          id: correlationContext.operation.parentId
+          id: correlationContext.operation.parentId,
+          data: req.query.input
         })
         appInsights.defaultClient.flush()
 
@@ -542,15 +558,17 @@ const handler = async (context: any, req: any) => {
       const eventHubInputs = triggerInput.split(',')
       return appInsights.wrapWithCorrelationContext(async () => {
         const startTime = Date.now()
+
         const response = await getEventHubFunction(
           eventHubInputs[0],
           eventHubInputs[1],
           correlationContext.operation.id
         )
+
         // Track dependency on completion
         appInsights.defaultClient.trackDependency({
-          name: 'CompletionTrackEventHub',
-          dependencyTypeName: 'HTTP',
+          name: 'eventHub_trigger',
+          dependencyTypeName: triggerType,
           resultCode: response.status,
           success: true,
           duration: Date.now() - startTime,
@@ -567,15 +585,17 @@ const handler = async (context: any, req: any) => {
       const eventGridInputs = triggerInput.split(',')
       return appInsights.wrapWithCorrelationContext(async () => {
         const startTime = Date.now()
+
         const response = await getEventGridFunction(
           eventGridInputs[0],
           eventGridInputs[1],
           correlationContext.operation.id
         )
+
         // Track dependency on completion
         appInsights.defaultClient.trackDependency({
-          name: 'CompletionTrackEventGrid',
-          dependencyTypeName: 'HTTP',
+          name: 'eventGrid_trigger',
+          dependencyTypeName: triggerType,
           resultCode: response.status,
           success: true,
           duration: Date.now() - startTime,
@@ -587,9 +607,10 @@ const handler = async (context: any, req: any) => {
       }, correlationContext)()
     }
   }
+
   // If either parameter is missing or is invalid
   return {
-    status: 200,
+    status: 400,  // 400 bad request
     headers: {
       'content-type': 'text/plain'
     },
