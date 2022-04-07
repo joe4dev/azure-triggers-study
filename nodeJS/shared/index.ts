@@ -23,7 +23,7 @@ const readTelemetry = new azure.appinsights.ApiKey('readTelemetry', {
 
 const current = azuread.getClientConfig({})
 const application = new azuread.Application('application', {
-  displayName: 'azure-triggers-study',
+  displayName: 'azure-trigger-bench',
   owners: [current.then((current: { objectId: any }) => current.objectId)]
 })
 const servicePrincipal = new azuread.ServicePrincipal('servicePrincipal', {
@@ -34,7 +34,7 @@ const servicePrincipal = new azuread.ServicePrincipal('servicePrincipal', {
 
 const clientSecret = new azuread.ApplicationPassword('exampleClientSecret', {
   applicationObjectId: application.objectId,
-  displayName: 'azure-triggers-study-secret',
+  displayName: 'azure-trigger-bench-secret',
   endDateRelative: '3600h'
 })
 
@@ -354,7 +354,7 @@ function writeEnv () {
 
   fs.writeFile(
     '../.env',
-    'PULUMI_PROJECT_NAME="azure-triggers-study" \n',
+    'PULUMI_PROJECT_NAME="azure-trigger-bench" \n',
     { flag: 'a' },
     (err: any) => {
       if (err) {
