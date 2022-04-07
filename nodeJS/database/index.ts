@@ -37,10 +37,20 @@ const getDatabaseResources = async () => {
   const connectionKey = `Cosmos${process.env['ACCOUNTDB_NAME']}ConnectionKey`
 
   // SQL on change trigger
+  // Azure CosmosDB properties: https://docs.microsoft.com/en-us/azure/azure-functions/functions-bindings-cosmosdb-v2-trigger?tabs=in-process%2Cfunctionsv2&pivots=programming-language-javascript#configuration
+  // Azure recommendations to improve trigger time: https://docs.microsoft.com/en-us/azure/cosmos-db/sql/troubleshoot-changefeed-functions#my-changes-take-too-long-to-be-received
+  // Pulumi supported Typescript mixins: https://github.com/pulumi/pulumi-azure/blob/master/sdk/nodejs/cosmosdb/zMixins.ts
   const sqlEvent = sqlAccount.onChange('databaseTrigger', {
     databaseName: sqlDatabase.name,
     collectionName: sqlContainer.name,
     startFromBeginning: true,
+    // See: https://docs.microsoft.com/en-us/java/api/com.microsoft.azure.functions.annotation.cosmosdbtrigger.feedpolldelay?view=azure-java-stable
+    // Added in PR: https://github.com/pulumi/pulumi-azure/pull/1052
+    // Current version: https://github.com/pulumi/pulumi-azure/blob/master/sdk/nodejs/cosmosdb/zMixins.ts
+    feedPollDelay: 10, // in milliseconds
+    // See: https://docs.microsoft.com/en-us/java/api/com.microsoft.azure.functions.annotation.cosmosdbtrigger.maxitemsperinvocation?view=azure-java-stable
+    maxItemsPerInvocation: 1,
+    checkpointDocumentCount: 1,
     location: process.env.PULUMI_AZURE_LOCATION,
     callback: handler,
     appSettings: {

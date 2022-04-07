@@ -4,8 +4,8 @@
         "@types/node": "^17.0.14"
     },
     "dependencies": {
-        "@pulumi/azure": "^4.42.0",
-        "@pulumi/pulumi": "^3.28.0",
+        "@pulumi/azure": "https://gitpkg.now.sh/joe4dev/pulumi-azure/sdk/nodejs?37f28ddea54339f672adef7924dd01978dceff10",
+        "@pulumi/pulumi": "^3.27.0",
         "applicationinsights": "^2.3.0",
         "dotenv": "^16.0.0"
     }

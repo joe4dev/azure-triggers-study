@@ -5,9 +5,9 @@ from dotenv import load_dotenv
 
 BENCHMARK_CONFIG = """
 trigger_bench:
-  description: Tests different trigger types.
+  description: Measures the latency to trigger an Azure function.
   provider: azure
-  trigger: timer
+  trigger: database
   region: eastus
   runtime: node
 """
@@ -16,6 +16,9 @@ DO_INIT = True
 
 
 def prepare(spec):
+    # Initial custom installation based on custom Pulumi Azure fork: https://github.com/joe4dev/pulumi-azure/commits/37f28ddea54339f672adef7924dd01978dceff10/sdk/nodejs
+    # fix_cmd = "cd database && npm install 'https://gitpkg.now.sh/joe4dev/pulumi-azure/sdk/nodejs?37f28ddea54339f672adef7924dd01978dceff10'"
+    # spec.run(fix_cmd, image='node12.x')
     if DO_INIT:
         # Initialization
         init = ['shared', spec['trigger'], 'infra']
