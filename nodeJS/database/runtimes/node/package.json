@@ -1,6 +1,6 @@
 {
-  "name": "",
-  "version": "",
+  "name": "database-function",
+  "version": "0.1.0",
   "scripts": {
     "build": "tsc",
     "build:production": "npm run prestart && npm prune --production",

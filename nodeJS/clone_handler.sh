@@ -9,7 +9,7 @@
 # the deployment to fail.
 
 cp http/handler.ts queue/handler.ts
-cp http/handler.ts database/handler.ts
+cp http/handler.ts database/runtimes/node/CosmosTrigger/index.ts
 cp http/handler.ts storage/handler.ts
 cp http/handler.ts serviceBus/handler.ts
 cp http/handler.ts eventGrid/handler.ts

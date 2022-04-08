@@ -12,10 +12,11 @@ trigger_bench:
   runtime: node
 """
 supported_triggers = ['http', 'storage', 'queue', 'database', 'serviceBus', 'eventHub', 'eventGrid', 'timer']
-DO_INIT = True
 # Huge size 2.67GB, see: https://github.com/Azure/azure-functions-docker/issues/323
 AZURE_FUNC_IMAGE = 'mcr.microsoft.com/azure-functions/node:3.0-node12-core-tools'
 PULUMI_IMAGE = 'pulumi/pulumi:3.28.0'
+
+DO_INIT = True
 
 
 def prepare(spec):
@@ -25,16 +26,19 @@ def prepare(spec):
     # It seems that "func extensions install" might not be required given the log output:
     # No action performed. Extension bundle is configured in /Users/joe/Projects/Serverless/azure-triggers-study/nodeJS/database/runtimes/node/host.json.
     # spec.run(db_function, image='node12.x')
-    # if DO_INIT:
-    #     # Initialization
-    #     init = ['shared', spec['trigger'], 'infra']
-    #     init_cmd = ' && '.join([f"cd {i} && npm install && cd .." for i in init])
-    #     spec.run(init_cmd, image='node12.x')
+    if DO_INIT:
+        # Initialization
+        init = ['shared', spec['trigger'], 'infra']
+        init_cmd = ' && '.join([f"cd {i} && npm install && cd .." for i in init])
+        spec.run(init_cmd, image='node12.x')
+        if spec['trigger'] == 'http':
+            db_init_cmd = 'cd database/runtimes/node && npm install && npm run build'
+            spec.run(db_init_cmd, image='node12.x')
 
     # # HACK: Invoke orchestrating deploy script directly. Same for cleanup.
     # # Suggestion 1: Use spec.run() to containerize the invocation
     # # Suggestion 2: Writing a Python orchestrator script is much less error prone than relying on shell scripts
-    run_cmd(f"bash deploy.sh -t {spec['trigger']} -l {spec['region']} -r {spec['runtime']}")
+    # run_cmd(f"bash deploy.sh -t {spec['trigger']} -l {spec['region']} -r {spec['runtime']}")
 
 
 def invoke(spec):
