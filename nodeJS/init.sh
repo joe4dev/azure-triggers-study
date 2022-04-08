@@ -38,10 +38,7 @@ cd timer/ && npm install
 
 cd ..
 
-cd http/triggers/node && npm install
+cd database/runtimes/node && npm install
 npm run build && func extensions install
 
-cd ..
-cd ..
-cd ..
-
+cd ../../..

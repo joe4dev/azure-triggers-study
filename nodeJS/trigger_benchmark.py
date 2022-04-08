@@ -13,21 +13,27 @@ trigger_bench:
 """
 supported_triggers = ['http', 'storage', 'queue', 'database', 'serviceBus', 'eventHub', 'eventGrid', 'timer']
 DO_INIT = True
+# Huge size 2.67GB, see: https://github.com/Azure/azure-functions-docker/issues/323
+AZURE_FUNC_IMAGE = 'mcr.microsoft.com/azure-functions/node:3.0-node12-core-tools'
+PULUMI_IMAGE = 'pulumi/pulumi:3.28.0'
 
 
 def prepare(spec):
-    # Initial custom installation based on custom Pulumi Azure fork: https://github.com/joe4dev/pulumi-azure/commits/37f28ddea54339f672adef7924dd01978dceff10/sdk/nodejs
-    # fix_cmd = "cd database && npm install 'https://gitpkg.now.sh/joe4dev/pulumi-azure/sdk/nodejs?37f28ddea54339f672adef7924dd01978dceff10'"
-    # spec.run(fix_cmd, image='node12.x')
-    if DO_INIT:
-        # Initialization
-        init = ['shared', spec['trigger'], 'infra']
-        init_cmd = ' && '.join([f"cd {i} && npm install && cd .." for i in init])
-        spec.run(init_cmd, image='node12.x')
+    # shared = "cd shared/ && npm install"
+    # database = "cd database/ && npm install"
+    # db_function = "cd database/runtimes/node && npm install && npm run build"
+    # It seems that "func extensions install" might not be required given the log output:
+    # No action performed. Extension bundle is configured in /Users/joe/Projects/Serverless/azure-triggers-study/nodeJS/database/runtimes/node/host.json.
+    # spec.run(db_function, image='node12.x')
+    # if DO_INIT:
+    #     # Initialization
+    #     init = ['shared', spec['trigger'], 'infra']
+    #     init_cmd = ' && '.join([f"cd {i} && npm install && cd .." for i in init])
+    #     spec.run(init_cmd, image='node12.x')
 
-    # HACK: Invoke orchestrating deploy script directly. Same for cleanup.
-    # Suggestion 1: Use spec.run() to containerize the invocation
-    # Suggestion 2: Writing a Python orchestrator script is much less error prone than relying on shell scripts
+    # # HACK: Invoke orchestrating deploy script directly. Same for cleanup.
+    # # Suggestion 1: Use spec.run() to containerize the invocation
+    # # Suggestion 2: Writing a Python orchestrator script is much less error prone than relying on shell scripts
     run_cmd(f"bash deploy.sh -t {spec['trigger']} -l {spec['region']} -r {spec['runtime']}")
 
 

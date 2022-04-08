@@ -3,19 +3,17 @@ RUNTIME=''
 FILE_NAME='../.env'
 FUNCTION_URL=''
 LOCATION=''
+FUNCTION_APP_URL=''
+FUNCTIONAPP_NAME=''
 
 deploy_shared_resources() {
-  # Deploy location
-  cd http
-  if [ "$LOCATION" = '' ]; then
-    echo "PULUMI_AZURE_LOCATION=\"northeurope\"" >>$FILE_NAME
-  else 
-    echo "PULUMI_AZURE_LOCATION=\"$LOCATION\"" >>$FILE_NAME
-  fi
-
-  cd ..
+  echo "PULUMI_AZURE_LOCATION=\"$LOCATION\"" >>'./.env'
+  echo "RUNTIME=\"$RUNTIME\"" >>'./.env'
   
   cd shared/ && pulumi stack select shared -c && pulumi up -f -y
+
+  echo "PULUMI_AZURE_LOCATION=\"$LOCATION\"" >>$FILE_NAME
+  echo "RUNTIME=\"$RUNTIME\"" >>$FILE_NAME
 
   # Get App Id
   APP_ID=$(pulumi stack output insightsAppId)
@@ -23,23 +21,13 @@ deploy_shared_resources() {
   INSIGHTS_NAME=$(pulumi stack output insightsName)
   # Get Resource group name
   RESOURCE_GROUP=$(pulumi stack output resourceGroupName)
-
-  echo "RUNTIME=\"$RUNTIME\"" >>$FILE_NAME
+  # Get Function app name
+  FUNCTION_APP_URL=$(pulumi stack output functionAppUrl)
+  FUNCTIONAPP_NAME=$(pulumi stack output functionAppName)
 
   # Create API key to be able to use Azure Insights REST API TODO use it with REST API
   az config set extension.use_dynamic_install=yes_without_prompt # Required to install and use app-insights module
 
-  #Set current time as name
-  
-  #API_KEY_NAME=$(date +%s%N)   
-  #API_KEY_NAME='master'                                  
-
-  #API_KEY=$(az monitor app-insights api-key show --app $INSIGHTS_NAME -g $RESOURCE_GROUP --api-key $API_KEY_NAME)
-
-  #if [ "$API_KEY" = "" ]; then
-    #API_KEY=$(
-     # az monitor app-insights api-key create --api-key $API_KEY_NAME --read-properties ReadTelemetry --resource-group $RESOURCE_GROUP --app $INSIGHTS_NAME ) 
-  #fi
 }
 
 deploy_http_trigger() {
@@ -52,7 +40,6 @@ deploy_http_trigger() {
 
   # Get url to HTTP trigger gateway
   TRIGGER_URL=$(pulumi stack output url)
-  FUNCTION_APP=$(pulumi stack output functionApp)
 
   cd ..
 
@@ -64,7 +51,6 @@ deploy_http_trigger() {
 
   echo "Write URL to .env"
   echo "BENCHMARK_URL=\"$BENCHMARK_URL?trigger=http&input=$TRIGGER_URL\"" >>$FILE_NAME
-  curl -s $FUNCTION_APP > /tmp/output.html
   echo "Start HTTP trigger benchmark:"
   echo "$BENCHMARK_URL?trigger=http&input=$TRIGGER_URL"
 }
@@ -84,7 +70,6 @@ deploy_storage_trigger() {
   # Assign required roles, get storage account name and container name
   STORAGE_ACCOUNT_NAME=$(pulumi stack output storageAccountName)
   CONTAINER_NAME=$(pulumi stack output containerName)
-  FUNCTION_APP=$(pulumi stack output functionApp)
   ##
   # assign role "Storage Blob Data Contributor" to relevant asignees
   ##
@@ -100,7 +85,6 @@ deploy_storage_trigger() {
   echo "Write URL to .env"
   echo "BENCHMARK_URL=\"$BENCHMARK_URL?trigger=storage&input=$CONTAINER_NAME,$STORAGE_ACCOUNT_NAME\"" >>$FILE_NAME
   echo "Initilize Function App"
-  curl -s ${FUNCTION_APP} > /tmp/output.html
   echo "Start storage trigger benchmark:"
   echo "$BENCHMARK_URL?trigger=storage&input=$CONTAINER_NAME,$STORAGE_ACCOUNT_NAME"
 }
@@ -120,7 +104,6 @@ deploy_queue_trigger() {
   # Get storage account name and queue name
   STORAGE_ACCOUNT_NAME=$(pulumi stack output storageAccountName)
   QUEUE_NAME=$(pulumi stack output queueName)
-  FUNCTION_APP=$(pulumi stack output functionApp)
 
   ##
   # assign role "Storage Blob Data Contributor" to relevant asignees
@@ -137,7 +120,6 @@ deploy_queue_trigger() {
   echo "Write URL to .env"
   echo "BENCHMARK_URL=\"$BENCHMARK_URL?trigger=queue&input=$QUEUE_NAME,$STORAGE_ACCOUNT_NAME\"" >>$FILE_NAME
   echo "Initilize Function App"
-  curl -s ${FUNCTION_APP} > /tmp/output.html
   echo "Start queue trigger benchmark:"
   echo "$BENCHMARK_URL?trigger=queue&input=$QUEUE_NAME,$STORAGE_ACCOUNT_NAME"
 }
@@ -157,12 +139,13 @@ deploy_database_trigger() {
   # Get storage account name and database name
   CONTAINER_NAME=$(pulumi stack output containerName)
   DATABASE_NAME=$(pulumi stack output databaseName)
-  FUNCTION_APP=$(pulumi stack output functionApp)
 
-  ##
-  # assign role "Storage Blob Data Contributor" to relevant asignees
-  ##
+  cd runtimes/node
+  
+  func azure functionapp publish $FUNCTIONAPP_NAME --$RUNTIME --force
 
+  cd ..
+  cd ..
   cd ..
 
   # Deploy infrastructure
@@ -174,7 +157,6 @@ deploy_database_trigger() {
   echo "Write URL to .env"
   echo "BENCHMARK_URL=\"$BENCHMARK_URL?trigger=database&input=$DATABASE_NAME,$CONTAINER_NAME\"" >>$FILE_NAME
   echo "Initilize Function App"
-  curl -s ${FUNCTION_APP} > /tmp/output.html
   echo "Start database trigger benchmark:"
   echo "$BENCHMARK_URL?trigger=database&input=$DATABASE_NAME,$CONTAINER_NAME"
 }
@@ -222,7 +204,6 @@ deploy_serviceBus_trigger() {
   # Get storage account name and serviceBus name
   SERVICE_BUS_NAMESPACE=$(pulumi stack output serviceBusNamespace)
   TOPIC_NAME=$(pulumi stack output topicName)
-  FUNCTION_APP=$(pulumi stack output functionApp)
 
   cd ..
 
@@ -235,7 +216,6 @@ deploy_serviceBus_trigger() {
   echo "Write URL to .env"
   echo "BENCHMARK_URL=\"$BENCHMARK_URL?trigger=serviceBus&input=$SERVICE_BUS_NAMESPACE,$TOPIC_NAME\"" >>$FILE_NAME
   echo "Initilize Function App"
-  curl -s ${FUNCTION_APP} > /tmp/output.html
   echo "Start serviceBus trigger benchmark:"
   echo "$BENCHMARK_URL?trigger=serviceBus&input=$SERVICE_BUS_NAMESPACE,$TOPIC_NAME"
 }
@@ -252,7 +232,6 @@ deploy_eventHub_trigger() {
   # Get timer function app name and trigger name
   EVENT_HUB_NAME=$(pulumi stack output eventHubName)
   EVENT_HUB_NAMESPACE=$(pulumi stack output eventHubNamespace)
-  FUNCTION_APP=$(pulumi stack output functionApp)
 
   cd ..
 
@@ -265,7 +244,6 @@ deploy_eventHub_trigger() {
   echo "Write URL to .env"
   echo "BENCHMARK_URL=\"$BENCHMARK_URL?trigger=eventHub&input=$EVENT_HUB_NAME,$EVENT_HUB_NAMESPACE\"" >>$FILE_NAME
   echo "Initilize Function App"
-  curl -s ${FUNCTION_APP} > /tmp/output.html
   echo "Start event hub trigger benchmark:"
   echo "$BENCHMARK_URL?trigger=eventHub&input=$EVENT_HUB_NAME,$EVENT_HUB_NAMESPACE"
 }
@@ -282,7 +260,6 @@ deploy_eventGrid_trigger() {
   # Get timer function app name and trigger name
   EVENT_GRID_STORAGE_NAME=$(pulumi stack output eventGridStorageAccountName)
   EVENT_GRID_CONTAINER_NAME=$(pulumi stack output eventGridStorageContainerName)
-  FUNCTION_APP=$(pulumi stack output functionApp)
 
   cd ..
 
@@ -295,7 +272,6 @@ deploy_eventGrid_trigger() {
   echo "Write URL to .env"
   echo "BENCHMARK_URL=\"$BENCHMARK_URL?trigger=eventGrid&input=$EVENT_GRID_STORAGE_NAME,$EVENT_GRID_CONTAINER_NAME\"" >>$FILE_NAME
   echo "Initilize Function App"
-  curl -s ${FUNCTION_APP} > /tmp/output.html
   echo "Start event grid trigger benchmark:"
   echo "$BENCHMARK_URL?trigger=eventGrid&input=$EVENT_GRID_STORAGE_NAME,$EVENT_GRID_CONTAINER_NAME"
 }
@@ -310,15 +286,21 @@ while getopts 't:r:l:' flag; do
   esac
 done
 
-if [ "$RUNTIME" = 'node' ] || [ "$RUNTIME" = 'dotnet' ] || [ "$RUNTIME" = '' ]; then
+if [ "$RUNTIME" = 'node' ] || [ "$RUNTIME" = 'dotnet' ]; then
   echo 'Runtime valid'
+elif [ "$RUNTIME" = '' ]; then
+  echo 'Default runtime: node'
+  RUNTIME='node'
 else
   echo 'ERROR: Unsupported runtime'
   exit
 fi
 
-if [ "$LOCATION" = 'northeurope' ] || [ "$LOCATION" = 'eastus' ] || ["$LOCATION" = '']; then
+if [ "$LOCATION" = 'northeurope' ] || [ "$LOCATION" = 'eastus' ]; then
   echo 'Location valid'
+elif ["$LOCATION" = '']; then
+  echo 'Default Location: northeurope'
+  LOCATION='northeurope'
 else
   echo 'ERROR: Unsupported location'
   exit
