@@ -42,15 +42,14 @@ const handler = async (context: any, event: any) => {
     // Parse root trace id from incoming event. Parsing depends on trigger type.
     let rootTraceId = ''
     const functionName = context['executionContext']['functionName']
-    if (functionName === 'databaseTrigger') {
-        // Parse the trace id received from the database
-        rootTraceId = context['bindings']['items'][0]['newOperationId']
-    } else if (functionName === 'httpTrigger') {
+    if (functionName === 'httpTrigger') {
         // Auto-correlation supported for http trigger,
         // therefore, the correlation context should have the
         // correct operation id equal to the root trace id.
         // rootTraceId = correlationContext.operation.id
         rootTraceId = event['query']['operationId']
+    } else if (functionName === 'databaseTrigger' || context['bindingDefinitions'][0]['type'] === 'cosmosDBTrigger') {
+        rootTraceId = event[0]['newOperationId']
     } else if (functionName === 'queueTrigger') {
         rootTraceId = event
     } else if (functionName === 'eventGridTrigger') {

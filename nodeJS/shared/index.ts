@@ -85,6 +85,10 @@ const runAsPackageContainer = new azure.storage.Container(`${runtime}-c`, {
 
 const connectionString = pulumi.interpolate`AccountEndpoint=${sqlAccount.endpoint};AccountKey=${sqlAccount.primaryKey};`
 
+// New version of Henrik+Henrik uses runtime as function name.
+// The current analysis depends on the function names of the previous version
+// to detect different trigger types.
+// SHOULD: Implement more generic trigger detection in generic handler to get rid of this dependency on function name.
 var endpoint = new FunctionApp(`${runtime}`, {
   resourceGroup: resourceGroup,
   storageAccount: storageAccount,

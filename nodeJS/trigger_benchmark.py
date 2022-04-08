@@ -20,29 +20,18 @@ DO_INIT = True
 
 
 def prepare(spec):
-    # shared = "cd shared/ && npm install"
-    # database = "cd database/ && npm install"
-    # db_function = "cd database/runtimes/node && npm install && npm run build"
-    # It seems that "func extensions install" might not be required given the log output:
-    # No action performed. Extension bundle is configured in /Users/joe/Projects/Serverless/azure-triggers-study/nodeJS/database/runtimes/node/host.json.
-    # spec.run(db_function, image='node12.x')
     if DO_INIT:
-        # Initialization
         init = ['shared', spec['trigger'], 'infra']
         init_cmd = ' && '.join([f"cd {i} && npm install && cd .." for i in init])
         spec.run(init_cmd, image='node12.x')
-        if spec['trigger'] == 'http':
+        if spec['trigger'] == 'database':
             db_init_cmd = 'cd database/runtimes/node && npm install && npm run build'
             spec.run(db_init_cmd, image='node12.x')
 
-    # # HACK: Invoke orchestrating deploy script directly. Same for cleanup.
-    # # Suggestion 1: Use spec.run() to containerize the invocation
-    # # Suggestion 2: Writing a Python orchestrator script is much less error prone than relying on shell scripts
-    # run_cmd(f"bash deploy.sh -t {spec['trigger']} -l {spec['region']} -r {spec['runtime']}")
+    run_cmd(f"bash deploy.sh -t {spec['trigger']} -l {spec['region']} -r {spec['runtime']}")
 
 
 def invoke(spec):
-    # SHOULD: replace dotenv with SPEC or consider using dotenv as more standardized way of parameter passing in the future instead of custom yml?! Or just for credentials!?
     load_dotenv()
     BENCHMARK_URL = os.getenv('BENCHMARK_URL')
     envs = {

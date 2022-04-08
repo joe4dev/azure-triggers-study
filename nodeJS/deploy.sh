@@ -255,7 +255,7 @@ deploy_eventGrid_trigger() {
   cd ..
 
   # Deploy database trigger
-  cd eventGrid/ && pulumi stack select trigger -c && pulumi up -f -y
+  cd eventGrid/ && export TRIGGER_TYPE=database pulumi stack select trigger -c && pulumi up -f -y
 
   # Get timer function app name and trigger name
   EVENT_GRID_STORAGE_NAME=$(pulumi stack output eventGridStorageAccountName)
