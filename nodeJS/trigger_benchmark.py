@@ -23,6 +23,8 @@ DO_INIT = True
 
 
 def prepare(spec):
+    # The DB trigger requires the Azure `func` tool we install in the official Pulumi image.
+    spec.build(PULUMI_FUNC_IMAGE)
     # Initialization
     if DO_INIT:
         init = ['shared', spec['trigger'], 'infra']
@@ -33,7 +35,7 @@ def prepare(spec):
             spec.run(db_init_cmd, image='node12.x')
     # Deployment
     deploy_cmd = f"bash deploy.sh -t {spec['trigger']} -l {spec['region']} -r {spec['runtime']}"
-    spec.run(deploy_cmd, image=PULUMI_IMAGE)
+    spec.run(deploy_cmd, image=PULUMI_FUNC_IMAGE)
     # Local mode:
     # run_cmd(deploy_cmd)
 
@@ -59,5 +61,12 @@ def cleanup(spec):
 
 
 def run_cmd(cmd):
+    """Runs a given shell command locally.
+    Requires all dependencies installed including:
+    * Node.js (12)
+    * Pulumi (3.28.0)
+    * Azure CLI (2.34.1)
+    * Azure Function Tools (4_4.0.3971)
+    """
     logging.info(cmd)
     os.system(cmd)
