@@ -41,26 +41,28 @@ const handler = async (context: any, event: any) => {
 
     // Parse root trace id from incoming event. Parsing depends on trigger type.
     let rootTraceId = ''
-    const functionName = context['executionContext']['functionName']
-    if (functionName === 'httpTrigger') {
+    // Azure Triggers and Bindings: https://docs.microsoft.com/en-us/azure/azure-functions/functions-triggers-bindings
+    // Example for HTTP trigger: https://docs.microsoft.com/en-us/azure/azure-functions/functions-bindings-http-webhook-trigger
+    const triggerType = context['bindingDefinitions'].find((e: any) => e.direction === 'in').type
+    if (triggerType === 'httpTrigger') {
         // Auto-correlation supported for http trigger,
         // therefore, the correlation context should have the
         // correct operation id equal to the root trace id.
         // rootTraceId = correlationContext.operation.id
         rootTraceId = event['query']['operationId']
-    } else if (functionName === 'databaseTrigger' || context['bindingDefinitions'][0]['type'] === 'cosmosDBTrigger') {
+    } else if (triggerType === 'cosmosDBTrigger') {
         rootTraceId = event[0]['newOperationId']
-    } else if (functionName === 'queueTrigger') {
+    } else if (triggerType === 'queueTrigger') {
         rootTraceId = event
-    } else if (functionName === 'eventGridTrigger') {
+    } else if (triggerType === 'eventGridTrigger') {
         rootTraceId = context["bindings"]["message"]["subject"].split('/').pop()
-    } else if (functionName === 'eventHubTrigger') {
+    } else if (triggerType === 'eventHubTrigger') {
         rootTraceId = event
-    } else if (functionName === 'serviceBusTrigger') {
+    } else if (triggerType === 'serviceBusTrigger') {
         rootTraceId = event.replace("|","").split(".")[0]
-    } else if (functionName === 'storageTrigger') {
+    } else if (triggerType === 'blobTrigger') {
         rootTraceId = context["bindingData"]["metadata"]["operationId"].replace('|', '').split('.')[0]
-    } else if (functionName === 'timerTrigger') {
+    } else if (triggerType === 'timerTrigger') {
         rootTraceId = context["bindingData"]["timer"].replace("|","").split(".")[0]
     } else {
         console.error('Could not detect rootTraceId for this trigger.')
