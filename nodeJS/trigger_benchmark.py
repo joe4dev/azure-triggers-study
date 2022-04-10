@@ -6,20 +6,24 @@ from dotenv import load_dotenv
 BENCHMARK_CONFIG = """
 trigger_bench:
   description: Measures the latency to trigger an Azure function.
-  provider: azure
-  trigger: database
+  provider:
+  - azure
+  - pulumi
+  trigger: queue
   region: eastus
   runtime: node
 """
 supported_triggers = ['http', 'storage', 'queue', 'database', 'serviceBus', 'eventHub', 'eventGrid', 'timer']
-# Huge size 2.67GB, see: https://github.com/Azure/azure-functions-docker/issues/323
-AZURE_FUNC_IMAGE = 'mcr.microsoft.com/azure-functions/node:3.0-node12-core-tools'
-PULUMI_IMAGE = 'pulumi/pulumi:3.28.0'
+
+PULUMI_VERSION = '3.28.0'
+PULUMI_IMAGE = f'pulumi/pulumi:{PULUMI_VERSION}'
+PULUMI_FUNC_IMAGE = 'pulumi-azure-func'
 
 DO_INIT = True
 
 
 def prepare(spec):
+    # Initialization
     if DO_INIT:
         init = ['shared', spec['trigger'], 'infra']
         init_cmd = ' && '.join([f"cd {i} && npm install && cd .." for i in init])
@@ -27,8 +31,11 @@ def prepare(spec):
         if spec['trigger'] == 'database':
             db_init_cmd = 'cd database/runtimes/node && npm install && npm run build'
             spec.run(db_init_cmd, image='node12.x')
-
-    run_cmd(f"bash deploy.sh -t {spec['trigger']} -l {spec['region']} -r {spec['runtime']}")
+    # Deployment
+    deploy_cmd = f"bash deploy.sh -t {spec['trigger']} -l {spec['region']} -r {spec['runtime']}"
+    spec.run(deploy_cmd, image=PULUMI_IMAGE)
+    # Local mode:
+    # run_cmd(deploy_cmd)
 
 
 def invoke(spec):
@@ -41,7 +48,14 @@ def invoke(spec):
 
 
 def cleanup(spec):
-    run_cmd(f"bash destroy.sh -t {spec['trigger']}")
+    destroy_cmd = (
+        'cd infra && pulumi destroy -f -y; cd ..'
+        f"; cd {spec['trigger']} && pulumi destroy -f -y; cd .."
+        '; cd shared && pulumi destroy -f -y; cd ..'
+    )
+    spec.run(destroy_cmd, image=PULUMI_IMAGE)
+    # Local mode:
+    # run_cmd(cmd)
 
 
 def run_cmd(cmd):
